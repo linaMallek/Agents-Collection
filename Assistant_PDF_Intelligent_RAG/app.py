@@ -61,7 +61,9 @@ else:
                     {'role': m['role'], 'content': m['content']}
                     for m in st.session_state.messages
                 ]
-                response = st.session_state.agent.invoke({'messages': lc_messages})
+                response = st.session_state.agent.invoke({'messages': lc_messages},
+                                                        {"configurable": {"thread_id": "1"}},)
+                
                 answer = response['messages'][-1].content
             st.markdown(answer)
 
