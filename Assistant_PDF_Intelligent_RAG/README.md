@@ -18,8 +18,14 @@ A small Streamlit app that lets you upload PDF files and ask questions using a R
 
 ```bash
 # from project root
-pip install -e .
+uv sync
+
+# activate your env
+source .venv/bin/activate        # Mac/Linux
+# .venv\Scripts\activate         # Windows
+
 export OPENAI_API_KEY="your_api_key_here"
+
 streamlit run app.py
 ```
 
