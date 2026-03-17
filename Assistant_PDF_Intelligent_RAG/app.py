@@ -4,15 +4,22 @@ import streamlit as st
 from src.ingest import create_db
 from src.rag_agent import build_agent
 
+import tempfile
+import os
+import streamlit as st
+from src.ingest import create_db
+from src.rag_agent import build_agent
+
 st.set_page_config(page_title='PDF Assistant', page_icon='📄')
 st.title('📄 PDF Assistant')
 
 # ── Sidebar: file upload ──────────────────────────────────────────────────────
 with st.sidebar:
-    st.header('Upload your document')
-    uploaded_file = st.file_uploader(
+    st.header('Upload your documents')
+    uploaded_files = st.file_uploader(          
         'Supported formats: PDF, TXT',
         type=['pdf', 'txt'],
+        accept_multiple_files=True,             
     )
 
 # ── Session state initialisation ─────────────────────────────────────────────
@@ -20,24 +27,39 @@ if 'agent' not in st.session_state:
     st.session_state.agent = None
 if 'messages' not in st.session_state:
     st.session_state.messages = []
-if 'current_file' not in st.session_state:
-    st.session_state.current_file = None
+if 'current_files' not in st.session_state:
+    st.session_state.current_files = []        
 
-# ── Build agent when a new file is uploaded ───────────────────────────────────
-if uploaded_file is not None and uploaded_file.name != st.session_state.current_file:
-    with st.spinner('Reading and indexing your document…'):
-        suffix = '.pdf' if uploaded_file.name.endswith('.pdf') else '.txt'
-        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-            tmp.write(uploaded_file.read())
-            tmp_path = tmp.name
-        try:
-            vector_store = create_db(tmp_path)
-            st.session_state.agent = build_agent(vector_store)
-            st.session_state.current_file = uploaded_file.name
-            st.session_state.messages = []
-        finally:
-            os.unlink(tmp_path)
-    st.success(f'✅ "{uploaded_file.name}" indexed. Ask away!')
+# ── Build agent when new files are uploaded ───────────────────────────────────
+if uploaded_files:
+    uploaded_names = sorted([f.name for f in uploaded_files])
+
+    if uploaded_names != st.session_state.current_files:   
+        with st.spinner('Reading and indexing your documents…'):
+            tmp_paths = []
+            try:
+                # save all files to temp paths
+                for uploaded_file in uploaded_files:
+                    suffix = '.pdf' if uploaded_file.name.endswith('.pdf') else '.txt'
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+                        tmp.write(uploaded_file.read())
+                        tmp_paths.append(tmp.name)
+
+                vector_store = create_db(tmp_paths)         
+                st.session_state.agent = build_agent(vector_store)
+                st.session_state.current_files = uploaded_names
+                st.session_state.messages = []
+            finally:
+                for path in tmp_paths:                      
+                    os.unlink(path)
+
+        st.success(f'✅ {len(uploaded_files)} file(s) indexed. Ask away!')
+        
+        # ✅ show which files are loaded in sidebar
+        with st.sidebar:
+            st.markdown("**Indexed files:**")
+            for name in uploaded_names:
+                st.markdown(f"- 📄 {name}")
 
 
 if st.session_state.agent is None:
