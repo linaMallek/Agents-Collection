@@ -1,6 +1,6 @@
 from langchain.agents import create_agent
 from src.models import model
-from src.tool import build_similarity_search_tool
+from src.search_tool import build_similarity_search_tool
 from langgraph.checkpoint.memory import InMemorySaver  
 
 def build_agent(vector_store):
